@@ -1,0 +1,119 @@
+@secret_id={{$dotenv SECRET_ID}}
+@secret_key={{$dotenv SECRET_KEY}}
+
+# @name login
+POST https://ob.nordigen.com/api/v2/token/new/
+Accept: application/json
+Content-Type: application/json
+
+{
+    "secret_id": "{{secret_id}}",
+    "secret_key": "{{secret_key}}"
+}
+
+###
+
+@authToken = {{login.response.body.access}}
+@refreshToken = {{login.response.body.refresh}}
+
+# @name login
+POST https://ob.nordigen.com/api/v2/token/refresh/
+Accept: application/json
+Content-Type: application/json
+
+{
+    "refresh": "{{refreshToken}}"
+}
+
+###
+
+@authToken = {{login.response.body.access}}
+
+# @name banksByContry
+GET https://ob.nordigen.com/api/v2/institutions/?country=ES
+Accept: application/json
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{}
+
+###
+# Get institution id from previous stem
+@institution_id = REVOLUT_REVOGB21
+
+# @name aggrementEndUser
+POST https://ob.nordigen.com/api/v2/agreements/enduser/
+Accept: application/json
+Authorization: Bearer ASsaSas{{authToken}}
+Content-Type: application/json
+
+{
+  "max_historical_days": 365,
+  "access_valid_for_days": 90,
+  "access_scope": [
+    "balances",
+    "details",
+    "transactions"
+  ],
+  "institution_id": "{{institution_id}}"
+}
+###
+
+@agreementId = {{aggrementEndUser.response.body.id}}
+
+# @name requisition
+POST https://ob.nordigen.com/api/v2/requisitions/
+Accept: application/json
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "redirect": "https://pablosanjose.com",
+  "institution_id": "{{institution_id}}",
+  "agreement": "{{agreementId}}",
+  "reference": "test-revolut-01",
+  "user_language": "EN"
+}
+
+# Follow the link to start the end-user authentication process with the financial institution.
+# Save the requisition ID (id in the response).
+# You will later need it to retrieve the list of end-user accounts.
+
+@requisitionId = {{requisition.response.body.id}}
+###
+
+# @name listAccounts
+GET https://ob.nordigen.com/api/v2/requisitions/{{requisitionId}}/
+accept: application/json
+Authorization: Bearer {{authToken}}
+
+# Response accounts
+#   "accounts": [
+#     "70e77e00-7b61-4351-bf3c-b99d7890d613", # ahorros
+#     "7ef11733-598c-4a17-a210-d01e0d47e538", # USD
+#     "8d056062-81ab-452b-9bd7-429515c00c15",
+#     "d6832d37-2731-4a6a-9302-f08e23f40e38", # EUR
+#     "f7973909-80a0-4b9c-92a1-2332a0efbf6a"
+#   ],
+@account_id = d6832d37-2731-4a6a-9302-f08e23f40e38
+
+###
+
+# @name getAccount
+GET https://ob.nordigen.com/api/v2/accounts/{{account_id}}/
+accept: application/json
+Authorization: Bearer {{authToken}}
+
+###
+
+# @name getDetails
+GET https://ob.nordigen.com/api/v2/accounts/{{account_id}}/details
+accept: application/json
+Authorization: Bearer {{authToken}}
+
+###
+
+# @name getTransactions
+GET https://ob.nordigen.com/api/v2/accounts/{{account_id}}/transactions
+accept: application/json
+Authorization: Bearer {{authToken}}
